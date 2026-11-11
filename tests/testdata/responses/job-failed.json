@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "data": {
+    "job_id": "04b228dc-6725-4ab2-818e-44b36de8479e",
+    "status": "failed",
+    "total_emails": 1,
+    "processed_emails": 0,
+    "progress_percent": 0,
+    "summary": {
+      "valid": 0,
+      "invalid": 0,
+      "risky": 0,
+      "unknown": 0
+    },
+    "created_at": "2026-09-21T17:30:28.617Z",
+    "updated_at": "2026-09-21T17:47:38.600Z",
+    "completed_at": "2026-09-21T17:47:03.811Z",
+    "credits_used": 1,
+    "credits_refunded": 1,
+    "billing_status": "refunded",
+    "error_message": "Verification did not complete; credit refunded."
+  }
+}

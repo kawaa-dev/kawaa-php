@@ -1,0 +1,10 @@
+{
+  "event": "credits.low",
+  "data": {
+    "credits_remaining": 99.5,
+    "threshold": 100,
+    "triggered_at": "2026-09-30T18:03:19.551Z"
+  },
+  "webhook_id": "wh_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+  "timestamp": "2026-09-30T18:03:20.104Z"
+}

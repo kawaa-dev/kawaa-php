@@ -1,0 +1,44 @@
+{
+    "name": "kawaa/kawaa-php",
+    "description": "PHP client SDK source for Kawaa Email Verification API",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "email",
+        "verification",
+        "validation",
+        "kawaa",
+        "email-verification"
+    ],
+    "authors": [
+        {
+            "name": "Kawaa",
+            "email": "support@kawaa.com"
+        }
+    ],
+    "homepage": "https://kawaa.com",
+    "require": {
+        "php": ">=8.1",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "phpstan/phpstan": "^1.10"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kawaa\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kawaa\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse src --level=8"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

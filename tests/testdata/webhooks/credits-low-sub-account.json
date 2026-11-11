@@ -1,0 +1,14 @@
+{
+  "event": "credits.low",
+  "data": {
+    "account_type": "sub_account",
+    "sub_account_id": "sub_3f9a1c7e5b2d8a64",
+    "sub_account_name": "Northwind Agency",
+    "credits_allocated": 5000,
+    "credits_remaining": 999.5,
+    "threshold": 1000,
+    "triggered_at": "2026-09-30T16:12:44.907Z"
+  },
+  "webhook_id": "wh_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+  "timestamp": "2026-09-30T16:12:45.660Z"
+}

@@ -1,0 +1,40 @@
+{
+  "job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+  "status": "completed",
+  "result_count": 2,
+  "complete": true,
+  "expected_rows": 2,
+  "rows_missing": 0,
+  "results": [
+    {
+      "email": "nobody-contract-probe@mailinator.com",
+      "status": "disposable",
+      "score": 15,
+      "disposable": true,
+      "role": false,
+      "free_provider": false,
+      "suggestion": null,
+      "mx_records": [
+        "mail2.mailinator.com",
+        "mail.mailinator.com"
+      ],
+      "smtp_response": null,
+      "verified_at": "2026-10-01T23:24:53.377Z"
+    },
+    {
+      "email": "no-such-user-zz91@kawaa.com",
+      "status": "catch_all",
+      "score": 60,
+      "disposable": false,
+      "role": false,
+      "free_provider": false,
+      "catch_all": true,
+      "suggestion": null,
+      "mx_records": [
+        "smtp.google.com"
+      ],
+      "smtp_response": "250 2.1.5 OK 6a1803df08f44-917edbc1a7fsi7030706d6.537 - gsmtp",
+      "verified_at": "2026-10-01T23:24:53.380Z"
+    }
+  ]
+}

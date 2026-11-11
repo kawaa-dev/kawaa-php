@@ -1,0 +1,18 @@
+{
+  "event": "job.failed",
+  "job_id": "b2d7e1f0-3c4a-4b5d-8e6f-7a8b9c0d1e2f",
+  "status": "failed",
+  "created_at": "2026-09-30T15:00:00.000Z",
+  "failed_at": "2026-09-30T15:00:04.215Z",
+  "error": "All messages failed to enqueue",
+  "results": {
+    "total": 2500,
+    "processed": 0,
+    "valid": 0,
+    "invalid": 0,
+    "risky": 0,
+    "unknown": 0
+  },
+  "requested_emails": 2500,
+  "credits_refunded": 2500
+}

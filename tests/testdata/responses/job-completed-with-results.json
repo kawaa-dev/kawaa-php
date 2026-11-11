@@ -1,0 +1,119 @@
+{
+  "success": true,
+  "data": {
+    "job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+    "status": "completed",
+    "total_emails": 2,
+    "processed_emails": 2,
+    "progress_percent": 100,
+    "summary": {
+      "valid": 0,
+      "invalid": 1,
+      "risky": 1,
+      "unknown": 0
+    },
+    "created_at": "2026-10-01T23:24:52.980Z",
+    "updated_at": "2026-10-01T23:24:55.034Z",
+    "completed_at": "2026-10-01T23:24:54.718Z",
+    "credits_used": 2,
+    "credits_refunded": 0,
+    "billing_status": "charged",
+    "results": [
+      {
+        "job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+        "batch_job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+        "email": "nobody-contract-probe@mailinator.com",
+        "status": "disposable",
+        "quality_score": 15,
+        "verification": {
+          "syntax_valid": true,
+          "domain_exists": true,
+          "mx_found": true,
+          "mx_records": [
+            "mail2.mailinator.com",
+            "mail.mailinator.com"
+          ],
+          "greylisted": false
+        },
+        "flags": {
+          "disposable": true,
+          "role_account": false,
+          "free_provider": false,
+          "spam_trap": false,
+          "abuse_email": false,
+          "honeypot": false,
+          "complainer": false,
+          "bot_generated": false
+        },
+        "domain_info": {
+          "domain": "mailinator.com",
+          "provider_type": "unknown",
+          "auth_score": 77,
+          "auth_grade": "C",
+          "has_spf": true,
+          "spf_policy": "Fail",
+          "has_dmarc": true,
+          "dmarc_policy": "Reject",
+          "has_dkim": true
+        },
+        "credits_used": 1,
+        "processing_time_ms": 701,
+        "verified_at": "2026-10-01T23:24:53.377Z",
+        "from_cache": false,
+        "classifier_version": 7
+      },
+      {
+        "job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+        "batch_job_id": "2e31e0ec-c747-4aec-9b37-1a24c184ee7b",
+        "email": "no-such-user-zz91@kawaa.com",
+        "status": "catch_all",
+        "sub_status": "catch_all",
+        "quality_score": 60,
+        "verification": {
+          "syntax_valid": true,
+          "domain_exists": true,
+          "mx_found": true,
+          "mx_records": [
+            "smtp.google.com"
+          ],
+          "smtp_check": true,
+          "catch_all": true,
+          "greylisted": false,
+          "smtp_code": 250,
+          "smtp_message": "250 2.1.5 OK 6a1803df08f44-917edbc1a7fsi7030706d6.537 - gsmtp"
+        },
+        "flags": {
+          "disposable": false,
+          "role_account": false,
+          "free_provider": false,
+          "spam_trap": false,
+          "abuse_email": false,
+          "honeypot": false,
+          "complainer": false,
+          "bot_generated": false
+        },
+        "domain_info": {
+          "domain": "kawaa.com",
+          "provider_type": "corporate",
+          "auth_score": 90,
+          "auth_grade": "A",
+          "has_spf": true,
+          "spf_policy": "Fail",
+          "has_dmarc": true,
+          "dmarc_policy": "Reject",
+          "has_dkim": true
+        },
+        "ai": {
+          "catch_all_confidence": 15
+        },
+        "credits_used": 1,
+        "processing_time_ms": 1312,
+        "verified_at": "2026-10-01T23:24:53.380Z",
+        "from_cache": false,
+        "classifier_version": 7
+      }
+    ],
+    "next_key": null,
+    "has_more": false
+  }
+}

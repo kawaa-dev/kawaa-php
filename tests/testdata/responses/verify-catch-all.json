@@ -1,0 +1,54 @@
+{
+  "success": true,
+  "data": {
+    "job_id": "cb4f5bee-603a-4487-ac7a-1bc6ae49d10c",
+    "email": "hello@kawaa.com",
+    "status": "catch_all",
+    "sub_status": "catch_all",
+    "quality_score": 60,
+    "verification": {
+      "syntax_valid": true,
+      "domain_exists": true,
+      "mx_found": true,
+      "mx_records": [
+        "smtp.google.com"
+      ],
+      "smtp_check": true,
+      "catch_all": true,
+      "greylisted": false,
+      "smtp_code": 250,
+      "smtp_message": "250 2.1.5 OK d75a77b69052e-53398dad470si11368041cf.274 - gsmtp"
+    },
+    "flags": {
+      "disposable": false,
+      "role_account": true,
+      "free_provider": false,
+      "spam_trap": false,
+      "abuse_email": false,
+      "honeypot": false,
+      "complainer": false,
+      "bot_generated": false
+    },
+    "domain_info": {
+      "domain": "kawaa.com",
+      "provider_type": "corporate",
+      "auth_score": 90,
+      "auth_grade": "A",
+      "has_spf": true,
+      "spf_policy": "Fail",
+      "has_dmarc": true,
+      "dmarc_policy": "Reject",
+      "has_dkim": true
+    },
+    "ai": {
+      "catch_all_confidence": 45
+    },
+    "credits_used": 1,
+    "processing_time_ms": 1297,
+    "verified_at": "2026-10-01T23:24:48.733Z",
+    "from_cache": false,
+    "classifier_version": 7,
+    "request_id": "42f70b28-d076-4f3a-a3ec-3fa1311027e7",
+    "credits_remaining": 27.25
+  }
+}

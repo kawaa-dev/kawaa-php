@@ -1,0 +1,15 @@
+{
+  "event": "job.failed",
+  "data": {
+    "job_id": "b2d7e1f0-3c4a-4b5d-8e6f-7a8b9c0d1e2f",
+    "status": "failed",
+    "total_emails": 2500,
+    "processed_emails": 0,
+    "requested_emails": 2500,
+    "credits_refunded": 2500,
+    "error": "All messages failed to enqueue",
+    "failed_at": "2026-09-30T15:00:04.215Z"
+  },
+  "webhook_id": "wh_1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d",
+  "timestamp": "2026-09-30T15:00:05.118Z"
+}
