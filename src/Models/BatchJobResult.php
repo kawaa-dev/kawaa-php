@@ -45,6 +45,21 @@ class BatchJobResult
          * Null when the API did not say.
          */
         public readonly ?bool $idempotentReplay = null,
+        /**
+         * How many submitted addresses the API refused as malformed and never
+         * verified or charged: the job's results are that much shorter than
+         * the list you sent. Null when the API did not report it.
+         */
+        public readonly ?int $invalidEmailsSkipped = null,
+        /**
+         * How many queue sends could not be confirmed. Their credits are in
+         * $creditsHeld, not spent: poll the job until it reconciles. Null
+         * means the API did not report a count, not that every send was
+         * confirmed: a replay of a batch still in that state carries the
+         * status but no count. The status JobStatus::ENQUEUE_UNKNOWN, or a
+         * positive count, is what says some sends are unconfirmed.
+         */
+        public readonly ?int $enqueueUnknown = null,
     ) {}
 
     /**
@@ -68,6 +83,8 @@ class BatchJobResult
             message: $data['message'] ?? null,
             creditsHeld: self::amount($data['credits_held'] ?? null),
             idempotentReplay: $replay,
+            invalidEmailsSkipped: self::wholeCount($data['invalid_emails_skipped'] ?? null),
+            enqueueUnknown: self::wholeCount($data['enqueue_unknown'] ?? null),
         );
     }
 
@@ -78,6 +95,12 @@ class BatchJobResult
     private static function amount(mixed $value): ?float
     {
         return is_int($value) || is_float($value) ? (float) $value : null;
+    }
+
+    /** A whole-number count; absent or not an integer is null. */
+    private static function wholeCount(mixed $value): ?int
+    {
+        return is_int($value) ? $value : null;
     }
 
     /**
@@ -96,6 +119,8 @@ class BatchJobResult
             'message' => $this->message,
             'credits_held' => $this->creditsHeld,
             'idempotent_replay' => $this->idempotentReplay,
+            'invalid_emails_skipped' => $this->invalidEmailsSkipped,
+            'enqueue_unknown' => $this->enqueueUnknown,
         ];
     }
 }

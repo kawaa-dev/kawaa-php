@@ -56,6 +56,12 @@ class JobStatusResult
          * $creditsRefunded, both read from the job.
          */
         public readonly ?float $creditsRefunded = null,
+        /**
+         * Why the job ended as it did, in the API's own words
+         * (`error_message`), for example on a failed job. Null when the API
+         * gave no reason.
+         */
+        public readonly ?string $errorMessage = null,
     ) {}
 
     /**
@@ -93,6 +99,7 @@ class JobStatusResult
             hasMore: (bool)($data['has_more'] ?? false),
             creditsCharged: self::amount($data['credits_used'] ?? null),
             creditsRefunded: self::amount($data['credits_refunded'] ?? null),
+            errorMessage: is_string($data['error_message'] ?? null) ? $data['error_message'] : null,
         );
     }
 
@@ -181,6 +188,7 @@ class JobStatusResult
             'has_more' => $this->hasMore,
             'credits_charged' => $this->creditsCharged,
             'credits_refunded' => $this->creditsRefunded,
+            'error_message' => $this->errorMessage,
         ];
     }
 }

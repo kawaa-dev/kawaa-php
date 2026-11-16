@@ -57,6 +57,29 @@ class VerificationResult
          * charge stands on that job. Null when the API did not say.
          */
         public readonly ?bool $idempotentReplay = null,
+        /**
+         * True when the API answered from its verification cache (charged
+         * 0.5) instead of checking the mailbox again.
+         */
+        public readonly bool $fromCache = false,
+        /**
+         * How old a cached result is, in seconds. Set on every cache hit,
+         * beside $fromCache; null otherwise. Without it a result reused from
+         * days ago reads exactly like one measured this second.
+         */
+        public readonly ?int $cacheAgeSeconds = null,
+        /**
+         * When the verdict was measured (ISO 8601). On a cache hit it is the
+         * time of the original check, not of this call.
+         */
+        public readonly ?string $verifiedAt = null,
+        /**
+         * Name, gender and country hints, attached when the request set
+         * `enrich` and the plan includes data enrichment (Business and up).
+         * Null when the request did not ask for it, and when the API knows
+         * nothing about the address, which is not a judgement about it.
+         */
+        public readonly ?Enrichment $enrichment = null,
     ) {}
 
     /**
@@ -144,6 +167,13 @@ class VerificationResult
             idempotentReplay: is_bool($data['idempotent_replay'] ?? null)
                 ? $data['idempotent_replay']
                 : null,
+            // Read leniently, like the credit figures: the verification is
+            // charged before it is parsed, and a value of the wrong type is
+            // "not stated", never an error that drives a paid retry.
+            fromCache: ($data['from_cache'] ?? null) === true,
+            cacheAgeSeconds: is_int($data['cache_age_seconds'] ?? null) ? $data['cache_age_seconds'] : null,
+            verifiedAt: is_string($data['verified_at'] ?? null) ? $data['verified_at'] : null,
+            enrichment: is_array($data['enrichment'] ?? null) ? Enrichment::fromArray($data['enrichment']) : null,
         );
     }
 
@@ -202,6 +232,10 @@ class VerificationResult
             'credits_remaining' => $this->creditsRemaining,
             'credits_held' => $this->creditsHeld,
             'idempotent_replay' => $this->idempotentReplay,
+            'from_cache' => $this->fromCache,
+            'cache_age_seconds' => $this->cacheAgeSeconds,
+            'verified_at' => $this->verifiedAt,
+            'enrichment' => $this->enrichment?->toArray(),
         ];
     }
 }

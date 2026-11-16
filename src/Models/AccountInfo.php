@@ -43,8 +43,11 @@ class AccountInfo
         /**
          * Credits spent. Spend in the current billing period only when
          * `$allowanceBasis` is ALLOWANCE_BILLING_PERIOD; otherwise cumulative.
+         * Null when the API omitted the figure (for example, for a key without
+         * the `analytics:read` scope, where `$usageWithheld` is true). Never 0
+         * for "not reported": 0 reads as "spent nothing".
          */
-        public readonly float $creditsUsed,
+        public readonly ?float $creditsUsed,
         public readonly string $createdAt,
         public readonly ?string $name = null,
         public readonly ?string $status = null,
@@ -65,6 +68,16 @@ class AccountInfo
          * not renew either.
          */
         public readonly ?string $allowanceBasis = null,
+        /**
+         * True when the API withheld `$creditsUsed` because this key is not
+         * scoped for usage (`withheld.usage` in the response).
+         */
+        public readonly bool $usageWithheld = false,
+        /**
+         * Present (`"withheld"`) on the Free plan when another account already
+         * claimed this mailbox's one-time free grant (`credits.free_grant`).
+         */
+        public readonly ?string $freeGrant = null,
     ) {}
 
     /**
@@ -80,20 +93,47 @@ class AccountInfo
             $account = $data;
         }
 
+        $creditsUsed = self::firstNumber(
+            $credits['used_this_month'] ?? null,
+            $credits['credits_used'] ?? null,
+            $data['credits_used'] ?? null,
+        );
+        $withheld = $data['withheld'] ?? null;
+        $usageWithheld = $creditsUsed === null
+            && is_array($withheld)
+            && ($withheld['usage'] ?? null) === true;
+        $rawFreeGrant = $credits['free_grant'] ?? null;
+        $freeGrant = is_string($rawFreeGrant) && $rawFreeGrant !== '' ? $rawFreeGrant : null;
+
         return new self(
             userId: $account['user_id'] ?? '',
             email: $account['email'] ?? '',
             plan: $account['plan'] ?? 'free',
-            creditsRemaining: $credits['balance'] ?? $data['credits_remaining'] ?? 0,
+            creditsRemaining: self::firstNumber(
+                $credits['balance'] ?? null,
+                $data['credits_remaining'] ?? null,
+            ) ?? 0.0,
             // Sub-accounts report `credits_used` instead of `used_this_month`.
-            creditsUsed: $credits['used_this_month'] ?? $credits['credits_used'] ?? $data['credits_used'] ?? 0,
+            creditsUsed: $creditsUsed,
             createdAt: $account['created_at'] ?? '',
             name: $account['name'] ?? null,
             status: $account['status'] ?? null,
-            monthlyAllowance: $credits['monthly_allowance'] ?? null,
+            monthlyAllowance: self::firstNumber($credits['monthly_allowance'] ?? null),
             nextReset: $credits['next_reset'] ?? null,
             allowanceBasis: self::allowanceBasisFrom($credits, $account['plan'] ?? null),
+            usageWithheld: $usageWithheld,
+            freeGrant: $freeGrant,
         );
+    }
+
+    private static function firstNumber(mixed ...$values): ?float
+    {
+        foreach ($values as $value) {
+            if (is_int($value) || is_float($value)) {
+                return (float) $value;
+            }
+        }
+        return null;
     }
 
     /**
@@ -119,7 +159,7 @@ class AccountInfo
      */
     public function toArray(): array
     {
-        return [
+        $array = [
             'user_id' => $this->userId,
             'email' => $this->email,
             'plan' => $this->plan,
@@ -131,6 +171,11 @@ class AccountInfo
             'monthly_allowance' => $this->monthlyAllowance,
             'next_reset' => $this->nextReset,
             'allowance_basis' => $this->allowanceBasis,
+            'usage_withheld' => $this->usageWithheld,
         ];
+        if ($this->freeGrant !== null) {
+            $array['free_grant'] = $this->freeGrant;
+        }
+        return $array;
     }
 }

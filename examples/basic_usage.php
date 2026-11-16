@@ -109,7 +109,7 @@ try {
     echo "Email: {$account->email}\n";
     echo "Plan: {$account->plan}\n";
     echo "Credits remaining: {$account->creditsRemaining}\n";
-    echo "Credits used: {$account->creditsUsed}\n";
+    echo "Credits used: " . ($account->creditsUsed ?? 'not reported') . "\n";
 } catch (KawaaException $e) {
     echo "Error: {$e->getMessage()}\n";
 }

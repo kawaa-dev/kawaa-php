@@ -24,6 +24,23 @@ class VerificationFlags
         public readonly bool $catchAll = false,
         public readonly bool $spamTrap = false,
         public readonly bool $catchAllMeasured = false,
+        /**
+         * The local part matched an abuse, complaint-handling, feedback-loop,
+         * legal or blocklist-removal name or pattern (abuse@, postmaster@,
+         * feedback@), at any domain. A match on the address itself, not a
+         * finding about its owner.
+         */
+        public readonly bool $abuseEmail = false,
+        /**
+         * A narrower $abuseEmail: a complaint-handling mailbox at a reviewed
+         * anti-spam, feedback-loop or consumer-protection organization. Every
+         * address with $complainer set has $abuseEmail too.
+         */
+        public readonly bool $complainer = false,
+        /** The API's honeypot flag. */
+        public readonly bool $honeypot = false,
+        /** The API's bot_generated flag. */
+        public readonly bool $botGenerated = false,
     ) {}
 
     /**
@@ -43,6 +60,13 @@ class VerificationFlags
             catchAll: $catchAll,
             spamTrap: $data['spam_trap'] ?? false,
             catchAllMeasured: $catchAllMeasured ?? ($catchAll === true),
+            // Actual booleans only: the verification is charged before it is
+            // parsed, so a value of another type reads as false rather than
+            // failing the result.
+            abuseEmail: ($data['abuse_email'] ?? null) === true,
+            complainer: ($data['complainer'] ?? null) === true,
+            honeypot: ($data['honeypot'] ?? null) === true,
+            botGenerated: ($data['bot_generated'] ?? null) === true,
         );
     }
 
@@ -58,6 +82,10 @@ class VerificationFlags
             'catch_all' => $this->catchAll,
             'spam_trap' => $this->spamTrap,
             'catch_all_measured' => $this->catchAllMeasured,
+            'abuse_email' => $this->abuseEmail,
+            'complainer' => $this->complainer,
+            'honeypot' => $this->honeypot,
+            'bot_generated' => $this->botGenerated,
         ];
     }
 }

@@ -997,4 +997,53 @@ class KawaaTest extends TestCase
             $this->assertSame(5.0, $array['credits_used']);
         }
     }
+
+    public function testIncompleteJobDownloadPreservesReportedJobStatus(): void
+    {
+        $client = $this->downloadClient([
+            new Response(400, ['Content-Type' => 'application/json'], json_encode([
+                'success' => false,
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'Job is still pending. Please wait for completion.',
+                ],
+            ], JSON_THROW_ON_ERROR)),
+        ]);
+
+        try {
+            $client->downloadResults('job-pending');
+            $this->fail('Expected JobNotCompleteException');
+        } catch (\Kawaa\Exceptions\JobNotCompleteException $error) {
+            $this->assertSame('job-pending', $error->getJobId());
+            $this->assertSame('pending', $error->getStatus());
+        }
+    }
+
+    public function testAccountInfoHandlesWithheldUsageAndWithheldFreeGrant(): void
+    {
+        $account = \Kawaa\Models\AccountInfo::fromArray([
+            'account' => [
+                'user_id' => 'user-free-2',
+                'email' => 'alias@example.com',
+                'plan' => 'free',
+                'status' => 'active',
+                'created_at' => '2026-11-01T00:00:00Z',
+            ],
+            'credits' => [
+                'balance' => 0,
+                'monthly_allowance' => 100,
+                'allowance_basis' => 'one_time_grant',
+                'free_grant' => 'withheld',
+            ],
+            'withheld' => ['usage' => true],
+        ]);
+
+        $this->assertNull($account->creditsUsed);
+        $this->assertTrue($account->usageWithheld);
+        $this->assertSame('withheld', $account->freeGrant);
+        $serialized = $account->toArray();
+        $this->assertNull($serialized['credits_used']);
+        $this->assertTrue($serialized['usage_withheld']);
+        $this->assertSame('withheld', $serialized['free_grant']);
+    }
 }

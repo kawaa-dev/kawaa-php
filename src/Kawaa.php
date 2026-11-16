@@ -50,7 +50,7 @@ class Kawaa
      * written; the PHP SDK is released with the other SDKs in this repository
      * and a test holds it to their version.
      */
-    public const VERSION = '0.2.0';
+    public const VERSION = '0.3.0';
     /** Reads of a replayed verification's job, in total, before verify() returns it as pending. */
     private const REPLAY_POLL_MAX_READS = 3;
 
@@ -843,8 +843,10 @@ class Kawaa
     /**
      * Start a batch email verification job.
      *
-     * See verify() for option semantics (deep_verify, include_ai, enrich,
-     * timeout_ms, skip_cache are the real API options).
+     * See verify() for option semantics (deep_verify, include_ai, enrich and
+     * skip_cache). Do not pass $timeoutMs here: it bounds only the
+     * synchronous wait of verify(), and the API refuses it on a batch with
+     * 400 INVALID_OPTION (a ValidationException) before anything is charged.
      *
      * @param array<string> $emails List of email addresses to verify
      * @param string|null $webhookUrl URL to receive completion notification
@@ -852,7 +854,8 @@ class Kawaa
      * @param bool|null $deepVerify Perform deep (SMTP-level) verification (default: true)
      * @param bool|null $includeAi Use AI for typo detection (default: true)
      * @param bool|null $enrich Opt-in data enrichment (default: false)
-     * @param int|null $timeoutMs Server-side verification budget in milliseconds
+     * @param int|null $timeoutMs Leave null. The API refuses timeout_ms on a batch
+     *   (400 INVALID_OPTION, nothing charged); it applies to verify() only
      * @param bool|null $skipCache Bypass the verification cache (default: false)
      * @param bool|null $checkMx Deprecated; ignored
      * @param bool|null $checkSmtp Deprecated alias of $deepVerify
@@ -913,6 +916,8 @@ class Kawaa
      * @param array<string> $emails List of email addresses to verify
      * @param float $pollInterval Seconds between status checks (default: 2)
      * @param float $timeout Maximum seconds to wait (default: 300)
+     * @param int|null $timeoutMs Leave null. The API refuses timeout_ms on a batch
+     *   (400 INVALID_OPTION, nothing charged); $timeout bounds the wait here
      * @param string|null $idempotencyKey Sent as the batch's Idempotency-Key header;
      *   generated when omitted. Every exception thrown while submitting or waiting
      *   carries it (getIdempotencyKey()): repeat the call with it to replay the
@@ -1007,7 +1012,11 @@ class Kawaa
             }
 
             if ($status->isFailed()) {
-                throw new KawaaException("Job {$jobId} failed");
+                throw new KawaaException(
+                    $status->errorMessage !== null
+                        ? "Job {$jobId} failed: {$status->errorMessage}"
+                        : "Job {$jobId} failed"
+                );
             }
 
             $elapsed = microtime(true) - $startTime;
@@ -1042,7 +1051,10 @@ class Kawaa
             // (not in the shared error mapper) so other endpoints' 400s are
             // never hijacked by message-text matching.
             if (str_contains(strtolower($e->getMessage()), 'still')) {
-                throw new JobNotCompleteException($jobId, 'processing', $e->getResponseBody());
+                $status = preg_match('/\bjob is still ([a-z_]+)\b/i', $e->getMessage(), $matches) === 1
+                    ? strtolower($matches[1])
+                    : 'processing';
+                throw new JobNotCompleteException($jobId, $status, $e->getResponseBody());
             }
             throw $e;
         } catch (KawaaException $e) {

@@ -3,6 +3,43 @@
 All notable changes to this SDK are documented in this file. It was started at 0.2.0 and does not
 yet list every change made since 0.1.1.
 
+## [Unreleased]
+
+## [0.3.0] - 2026-11-16
+
+### Breaking changes
+
+- `AccountInfo::$creditsUsed` is `?float`, and null when the API omitted usage (such as for a
+  scoped key without `analytics:read`, where `$account->usageWithheld` is `true`). `AccountInfo::$freeGrant`
+  is `"withheld"` when `credits.free_grant` reports that another account already claimed the
+  mailbox's one-time Free grant.
+
+### Added
+
+- `VerificationResult::$enrichment` (a new `Enrichment` model with `firstName`, `lastName`,
+  `fullName`, `gender`, `country` and `countryCode`): the hints the API attaches when `enrich` is
+  set on a plan with data enrichment. 0.2.0 sent the option and dropped the answer.
+- `VerificationResult::$fromCache`, `$cacheAgeSeconds` and `$verifiedAt`, so a cached verdict says
+  how old it is. Download rows carry `verifiedAt` too.
+- `VerificationFlags::$abuseEmail`, `$complainer`, `$honeypot` and `$botGenerated`. The API lowers
+  the score for each without changing the status, so these say why a score is low.
+- `BatchJobResult::$invalidEmailsSkipped` (malformed addresses refused and not charged) and
+  `$enqueueUnknown` (queue sends that could not be confirmed; null means not reported, so read
+  the status for whether any are unconfirmed).
+- `JobStatusResult::$errorMessage`, the API's reason a job ended as it did. `waitForJob()` puts it
+  in the exception message for a failed job.
+
+All of them are new last constructor arguments with defaults, appear in `toArray()`, and are read
+leniently: a value of the wrong type reads as not stated and never fails the result.
+
+### Fixed
+
+- `downloadResults()` now preserves the actual job status from `"Job is still <status>."` on
+  `JobNotCompleteException` (for example `'pending'`) instead of hardcoding `'processing'`.
+- The `verifyBatch()` and `verifyBatchAndWait()` documentation offered `$timeoutMs` as a batch
+  option. The API refuses it on a batch with `400 INVALID_OPTION` before anything is charged; it
+  applies to `verify()` only.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added

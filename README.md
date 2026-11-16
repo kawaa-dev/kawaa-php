@@ -96,6 +96,19 @@ $result = $client->verify(
 
 `enrich` needs the Business plan or higher. On a lower plan the API refuses the whole request with `403 PLAN_UPGRADE_REQUIRED` and charges nothing, so leave it out there.
 
+```php
+// The enrichment the request asked for: null when not asked for, or when
+// nothing is known about the address.
+if ($result->enrichment !== null) {
+    echo "Country: {$result->enrichment->country}\n";
+}
+
+// A cached answer says how old it is.
+if ($result->fromCache && $result->cacheAgeSeconds !== null) {
+    echo "Cached result, measured {$result->cacheAgeSeconds} seconds ago\n";
+}
+```
+
 ## Domain Search
 
 Find all email addresses at a company domain. Each call charges 10 credits and
@@ -156,6 +169,8 @@ $emails = [
 $job = $client->verifyBatch($emails);
 echo "Job ID: {$job->jobId}\n";
 echo "Duplicates removed: {$job->duplicatesRemoved}\n";
+// 'invalid@' is malformed: skipped, not verified and not charged
+echo "Malformed addresses skipped: " . ($job->invalidEmailsSkipped ?? 'not reported') . "\n";
 // null on a replay of a batch already accepted under the same key
 echo "Credits used: " . ($job->creditsUsed ?? 'not reported') . "\n";
 
@@ -409,7 +424,10 @@ $account = $client->getAccount();
 echo "Credits remaining: {$account->creditsRemaining}\n";
 echo "Plan: {$account->plan}\n";
 
-if ($account->allowanceBasis === \Kawaa\Models\AccountInfo::ALLOWANCE_BILLING_PERIOD && $account->nextReset !== null) {
+if ($account->creditsUsed === null) {
+    // Omitted when the API key does not have the analytics:read scope ($account->usageWithheld is true).
+    echo "Credits used: not reported\n";
+} elseif ($account->allowanceBasis === \Kawaa\Models\AccountInfo::ALLOWANCE_BILLING_PERIOD && $account->nextReset !== null) {
     echo "Used {$account->creditsUsed} of {$account->monthlyAllowance} this billing period\n";
 } else {
     echo "Used {$account->creditsUsed} in total\n"; // nothing resets this on a schedule
@@ -546,6 +564,10 @@ $client = new Kawaa(
 | `creditsRemaining` | ?float | Balance after the charge; null when the API omitted it |
 | `creditsHeld` | ?float | Credits held rather than settled while pending |
 | `idempotentReplay` | ?bool | True when this repeated a request already accepted under the same Idempotency-Key, so nothing more was charged |
+| `fromCache` | bool | True when the API answered from its verification cache (charged 0.5) |
+| `cacheAgeSeconds` | ?int | How old a cached result is, in seconds. Set on every cache hit; null otherwise |
+| `verifiedAt` | ?string | When the verdict was measured. On a cache hit, the time of the original check |
+| `enrichment` | ?Enrichment | Name, gender and country hints (`firstName`, `lastName`, `fullName`, `gender`, `country`, `countryCode`) when `enrich` was set on a plan with data enrichment. Null when not asked for or nothing is known |
 
 Credit amounts are floats throughout the SDK: balances and charges are
 routinely fractional (a cached verification costs 0.5, an activity lookup
@@ -583,6 +605,14 @@ connection.
 | `catchAll` | bool | `true` when the domain was seen to accept mail for any address (or the status is `catch_all`). `false` also when nothing measured it: read `catchAllMeasured` |
 | `spamTrap` | bool | Reserved. Kawaa's reviewed trap-domain list is empty today, so it is `false` on every new result |
 | `catchAllMeasured` | bool | Whether catch-all was measured. `false` means `catchAll` is unknown, not "not catch-all": no probe ran (a disposable address, no usable mail server, a server that refused the mailbox or never answered) |
+| `abuseEmail` | bool | The local part matched an abuse, complaint-handling, feedback-loop, legal or blocklist-removal name (abuse@, postmaster@, feedback@), at any domain |
+| `complainer` | bool | A complaint-handling mailbox at a reviewed anti-spam, feedback-loop or consumer-protection organization. Always comes with `abuseEmail` |
+| `honeypot` | bool | The API's `honeypot` flag |
+| `botGenerated` | bool | The API's `bot_generated` flag |
+
+These four lower `score` without changing `status`, so read them to see why a
+score is low. The download export does not carry them: read them from
+`verify()` or from `getJobStatus()` results.
 
 ### JobStatusResult
 
@@ -599,6 +629,7 @@ connection.
 | `results` | array | The first page of VerificationResult items (up to 100). `hasMore` is true when there are more; `downloadResults()` returns them all |
 | `creditsCharged` | ?float | What the job was charged (the job's `credits_used`) |
 | `creditsRefunded` | ?float | What has come back since; the job cost `creditsCharged - creditsRefunded` |
+| `errorMessage` | ?string | Why the job ended as it did (for example, why it failed). `waitForJob()` puts it in its exception message |
 
 ### DomainSearchResult
 
