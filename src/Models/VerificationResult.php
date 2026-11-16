@@ -80,6 +80,13 @@ class VerificationResult
          * nothing about the address, which is not a judgement about it.
          */
         public readonly ?Enrichment $enrichment = null,
+        /**
+         * Whether the answer said if it came from the cache. A download row
+         * (downloadResults() in JSON) and a PENDING answer do not: $fromCache
+         * is then false without meaning "checked fresh", and this is false.
+         * getJobStatus($jobId, true) rows and finished verify() answers say.
+         */
+        public readonly bool $fromCacheStated = true,
     ) {}
 
     /**
@@ -174,6 +181,9 @@ class VerificationResult
             cacheAgeSeconds: is_int($data['cache_age_seconds'] ?? null) ? $data['cache_age_seconds'] : null,
             verifiedAt: is_string($data['verified_at'] ?? null) ? $data['verified_at'] : null,
             enrichment: is_array($data['enrichment'] ?? null) ? Enrichment::fromArray($data['enrichment']) : null,
+            // toArray() writes from_cache_stated, so a round trip keeps "not
+            // stated" instead of reading its false back as "checked fresh".
+            fromCacheStated: is_bool($data['from_cache'] ?? null) && ($data['from_cache_stated'] ?? null) !== false,
         );
     }
 
@@ -236,6 +246,7 @@ class VerificationResult
             'cache_age_seconds' => $this->cacheAgeSeconds,
             'verified_at' => $this->verifiedAt,
             'enrichment' => $this->enrichment?->toArray(),
+            'from_cache_stated' => $this->fromCacheStated,
         ];
     }
 }

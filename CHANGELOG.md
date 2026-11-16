@@ -5,6 +5,26 @@ yet list every change made since 0.1.1.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-16
+
+### Fixed
+
+- `VerificationResult::$fromCacheStated` and `VerificationFlags::$riskFlagsStated`. A download
+  row (`downloadResults()` in JSON) carries neither `from_cache` nor the four risk flags, and
+  0.3.0 read that as `fromCache` false and `abuseEmail`, `complainer`, `honeypot` and
+  `botGenerated` false. So an address the job's `getJobStatus()` rows reported as served from
+  cache and bot generated read as checked fresh and not bot generated in the download of the same
+  job. The values stay false there; the new properties say whether the answer stated them. A
+  pending answer has `fromCacheStated` false too. Both are new last constructor arguments that
+  default to true, `toArray()` writes them as `from_cache_stated` and `flags.risk_flags_stated`,
+  and `fromArray()` reads them back, so a round trip keeps "not stated". Nothing existing
+  changes type or value.
+- README samples now run as copied or say what to replace. The plain PHP webhook handler
+  answers a delivery with a bad, old or missing signature with 401 (uncaught, the exception made
+  PHP answer 500). The manual parsing sample reads the request body before parsing it, and
+  shows the unsigned per-job callback as its own sample. The batch webhook sample names the
+  endpoint you must supply.
+
 ## [0.3.0] - 2026-11-16
 
 ### Breaking changes

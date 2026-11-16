@@ -203,7 +203,9 @@ $result = $client->verifyBatchAndWait(
 ### Using webhooks
 
 ```php
-// Get notified when job completes
+// Get notified when job completes.
+// Use your own HTTPS endpoint: the API looks the host up and refuses one that does
+// not resolve (400 WEBHOOK_URL_INVALID, nothing charged).
 $job = $client->verifyBatch(
     $emails,
     webhookUrl: 'https://hooks.example.com/kawaa',
@@ -287,11 +289,19 @@ remember that anyone who knows the URL can send a body that parses. Prefer
 passing a `webhookSecret` with the batch.
 
 ```php
+use Kawaa\Exceptions\ValidationException;
 use Kawaa\Webhook;
 
 // Vanilla PHP: checks X-Kawaa-Signature-V2 and throws if the secret is blank or
-// the signature is missing, wrong or older than 300 seconds
-$event = Webhook::handleRequest((string) getenv('KAWAA_WEBHOOK_SECRET'));
+// the signature is missing, wrong or older than 300 seconds. Answer such a
+// delivery with 401: left uncaught, the exception makes PHP answer 500.
+try {
+    $event = Webhook::handleRequest((string) getenv('KAWAA_WEBHOOK_SECRET'));
+} catch (ValidationException $e) {
+    error_log('Kawaa webhook refused: ' . $e->getMessage()); // a blank secret shows here
+    http_response_code(401);
+    exit;
+}
 if ($job = $event->jobCompleted()) {
     echo "Job {$job->jobId} completed!\n";
     echo "Valid: {$job->summary?->valid}, Invalid: {$job->summary?->invalid}\n";
@@ -403,6 +413,9 @@ class WebhookController
 ```php
 use Kawaa\Webhook;
 
+// The raw request body, exactly as it arrived.
+$payload = (string) file_get_contents('php://input');
+
 // Parse with signature verification: pass the X-Kawaa-Signature-V2 header.
 // Throws when the signature is absent, wrong or outside the window.
 $event = Webhook::parse(
@@ -410,11 +423,16 @@ $event = Webhook::parse(
     signature: $_SERVER['HTTP_X_KAWAA_SIGNATURE_V2'] ?? null,
     secret: (string) getenv('KAWAA_WEBHOOK_SECRET'),
 );
+```
 
-// Parse a per-job callback sent without a webhookSecret. It is unsigned, so
-// anyone who knows the URL can send one.
-$payload = '{"event": "job.completed", ...}';
-$event = Webhook::parseUnverified($payload);
+A per-job callback sent without a `webhookSecret` has no signature, so
+`Webhook::parse()` refuses it. Parse it on its own, remembering that anyone who
+knows the URL can send one:
+
+```php
+use Kawaa\Webhook;
+
+$event = Webhook::parseUnverified((string) file_get_contents('php://input'));
 ```
 
 ## Account Information
@@ -564,10 +582,11 @@ $client = new Kawaa(
 | `creditsRemaining` | ?float | Balance after the charge; null when the API omitted it |
 | `creditsHeld` | ?float | Credits held rather than settled while pending |
 | `idempotentReplay` | ?bool | True when this repeated a request already accepted under the same Idempotency-Key, so nothing more was charged |
-| `fromCache` | bool | True when the API answered from its verification cache (charged 0.5) |
+| `fromCache` | bool | True when the API answered from its verification cache (charged 0.5). `false` also when the answer did not say: read `fromCacheStated` |
 | `cacheAgeSeconds` | ?int | How old a cached result is, in seconds. Set on every cache hit; null otherwise |
 | `verifiedAt` | ?string | When the verdict was measured. On a cache hit, the time of the original check |
 | `enrichment` | ?Enrichment | Name, gender and country hints (`firstName`, `lastName`, `fullName`, `gender`, `country`, `countryCode`) when `enrich` was set on a plan with data enrichment. Null when not asked for or nothing is known |
+| `fromCacheStated` | bool | Whether the answer said if it came from the cache. `false` on a download row and on a pending answer, which do not say; `fromCache` is then `false` without meaning "checked fresh" |
 
 Credit amounts are floats throughout the SDK: balances and charges are
 routinely fractional (a cached verification costs 0.5, an activity lookup
@@ -609,10 +628,12 @@ connection.
 | `complainer` | bool | A complaint-handling mailbox at a reviewed anti-spam, feedback-loop or consumer-protection organization. Always comes with `abuseEmail` |
 | `honeypot` | bool | The API's `honeypot` flag |
 | `botGenerated` | bool | The API's `bot_generated` flag |
+| `riskFlagsStated` | bool | Whether the answer carried the four flags above. `false` on a download row: there they read `false` without meaning "no" |
 
 These four lower `score` without changing `status`, so read them to see why a
-score is low. The download export does not carry them: read them from
-`verify()` or from `getJobStatus()` results.
+score is low. The download export does not carry them, so on a download row
+they read `false` and `riskFlagsStated` is `false`: read them from `verify()`
+or from `getJobStatus()` results.
 
 ### JobStatusResult
 

@@ -41,6 +41,13 @@ class VerificationFlags
         public readonly bool $honeypot = false,
         /** The API's bot_generated flag. */
         public readonly bool $botGenerated = false,
+        /**
+         * Whether the answer carried the four risk flags above. Download rows
+         * (downloadResults() in JSON) do not: there $abuseEmail, $complainer,
+         * $honeypot and $botGenerated read false without meaning "no", and
+         * this is false. Read them from getJobStatus($jobId, true) instead.
+         */
+        public readonly bool $riskFlagsStated = true,
     ) {}
 
     /**
@@ -53,6 +60,12 @@ class VerificationFlags
     public static function fromArray(array $data, ?bool $catchAllMeasured = null): self
     {
         $catchAll = $data['catch_all'] ?? false;
+        // Stated when the answer sent any of them as a boolean. toArray()
+        // writes risk_flags_stated, so a round trip keeps a download row's
+        // "not stated" instead of turning its false values into findings.
+        $riskFlagsStated = ($data['risk_flags_stated'] ?? null) !== false
+            && (is_bool($data['abuse_email'] ?? null) || is_bool($data['complainer'] ?? null)
+                || is_bool($data['honeypot'] ?? null) || is_bool($data['bot_generated'] ?? null));
         return new self(
             disposable: $data['disposable'] ?? false,
             role: $data['role_account'] ?? $data['role'] ?? false,
@@ -67,6 +80,7 @@ class VerificationFlags
             complainer: ($data['complainer'] ?? null) === true,
             honeypot: ($data['honeypot'] ?? null) === true,
             botGenerated: ($data['bot_generated'] ?? null) === true,
+            riskFlagsStated: $riskFlagsStated,
         );
     }
 
@@ -86,6 +100,7 @@ class VerificationFlags
             'complainer' => $this->complainer,
             'honeypot' => $this->honeypot,
             'bot_generated' => $this->botGenerated,
+            'risk_flags_stated' => $this->riskFlagsStated,
         ];
     }
 }
