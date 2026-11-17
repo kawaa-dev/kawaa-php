@@ -1010,15 +1010,105 @@ class RetryPolicyTest extends TestCase
         $this->assertCount(1, $this->history);
     }
 
-    public function testRetryAfterIsCappedAtSixtySeconds(): void
+    public function testRetryAfterUpToSixtySecondsIsWaitedAndRetried(): void
     {
         $this->assertSame(60, Kawaa::MAX_RETRY_AFTER_SECONDS);
-        $kawaa = $this->clientWith([self::rateLimited('3000000'), self::found()]);
+        $kawaa = $this->clientWith([self::rateLimited('60'), self::found()]);
 
         $kawaa->find('Jane', 'Doe', 'example.com');
 
         $this->assertCount(2, $this->history);
         $this->assertSame([60.0], $this->sleeps);
+    }
+
+    /**
+     * The API edge answers an address it has blocked with this 429. Up to
+     * 0.3.1 the client waited 60 seconds and tried again, maxRetries times,
+     * so each call hung about three minutes before the same exception.
+     */
+    private static function edgeBlock(): Response
+    {
+        return self::rateLimited('3900', ['retry_after_seconds' => 3900]);
+    }
+
+    public function testALongerRetryAfterThanTheCapIsThrownAtOnce(): void
+    {
+        $kawaa = $this->clientWith([self::edgeBlock(), self::found()]);
+
+        try {
+            $kawaa->find('Jane', 'Doe', 'example.com');
+            $this->fail('expected the 429 to surface');
+        } catch (RateLimitException $e) {
+            $this->assertSame(429, $e->getCode());
+            $this->assertSame(3900, $e->getRetryAfter());
+            $this->assertSame(3900, $e->getRetryAfterSeconds());
+            $this->assertTrue($e->getRetryable());
+            // The key the one attempt sent, for the caller's own retry later.
+            $this->assertSame($this->sentKeys()[0], $e->getIdempotencyKey());
+        }
+        $this->assertCount(1, $this->history);
+        $this->assertSame([], $this->sleeps);
+    }
+
+    /** @return array<string, array{0: Response}> */
+    public static function longerThanTheCap(): array
+    {
+        return [
+            'the header' => [self::rateLimited('61')],
+            'the body alone' => [self::rateLimited(null, ['retry_after_seconds' => 61])],
+            'a fraction above' => [self::rateLimited('60.5')],
+            'a keyed 5xx' => [self::json(503, ['success' => false, 'error' => [
+                'code' => 'SERVICE_UNAVAILABLE', 'message' => 'later', 'retryable' => true,
+                'retry_requires_same_idempotency_key' => true,
+            ]], ['Retry-After' => '3900'])],
+            'a keyed 409 in flight' => [self::conflict(true, 'CONFLICT', ['Retry-After' => '120'])],
+        ];
+    }
+
+    /**
+     * @dataProvider longerThanTheCap
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('longerThanTheCap')]
+    public function testNoAnswerAskingForLongerThanTheCapIsRetried(Response $answer): void
+    {
+        $kawaa = $this->clientWith([$answer, self::found()]);
+
+        try {
+            $kawaa->find('Jane', 'Doe', 'example.com');
+            $this->fail('expected the answer to surface');
+        } catch (KawaaException $e) {
+            $this->assertNotNull($e->getRetryAfterSeconds());
+            $this->assertGreaterThan(Kawaa::MAX_RETRY_AFTER_SECONDS, $e->getRetryAfterSeconds());
+        }
+        $this->assertCount(1, $this->history);
+        $this->assertSame([], $this->sleeps);
+    }
+
+    public function testALongDelayAfterAShortOneStopsAndKeepsTheKey(): void
+    {
+        $kawaa = $this->clientWith([self::keyedServerError(503, ['retryable' => true]), self::edgeBlock(), self::found()]);
+
+        try {
+            $kawaa->find('Jane', 'Doe', 'example.com');
+            $this->fail('expected the 429 to surface');
+        } catch (RateLimitException $e) {
+            $this->assertSame(3900, $e->getRetryAfter());
+            $keys = $this->sentKeys();
+            $this->assertCount(2, $keys);
+            $this->assertSame($keys[0], $keys[1]);
+            $this->assertSame($keys[0], $e->getIdempotencyKey());
+        }
+        $this->assertCount(1, $this->sleeps);
+    }
+
+    public function testShortRetryAftersAreStillRetried(): void
+    {
+        $kawaa = $this->clientWith([self::rateLimited('2'), self::rateLimited('2'), self::found()]);
+
+        $kawaa->find('Jane', 'Doe', 'example.com');
+
+        $this->assertCount(3, $this->history);
+        $this->assertSame([2.0, 2.0], $this->sleeps);
     }
 
     public function testRetryAfterOnTheLastAttemptIsReportedUnclamped(): void
@@ -1067,7 +1157,7 @@ class RetryPolicyTest extends TestCase
     {
         $kawaa = $this->clientWith([
             self::rateLimited(null, ['retry_after_seconds' => 7]),
-            self::rateLimited(null, ['retry_after_seconds' => 3000000]),
+            self::rateLimited(null, ['retry_after_seconds' => 60]),
             self::found(),
         ]);
 

@@ -50,14 +50,19 @@ class Kawaa
      * written; the PHP SDK is released with the other SDKs in this repository
      * and a test holds it to their version.
      */
-    public const VERSION = '0.3.1';
+    public const VERSION = '0.3.2';
     /** Reads of a replayed verification's job, in total, before verify() returns it as pending. */
     private const REPLAY_POLL_MAX_READS = 3;
 
     /**
-     * The longest the client waits before an automatic retry, in seconds,
-     * whatever `Retry-After` asks for. A longer wait is the caller's decision:
-     * the exception reports the server's own value (getRetryAfterSeconds()).
+     * The longest the client waits before an automatic retry, in seconds.
+     * When the API asks for longer (`Retry-After`, or the body's
+     * `retry_after_seconds`), the call is not retried: the exception is
+     * thrown at once and reports the server's own value
+     * (getRetryAfterSeconds()). A longer wait is the caller's decision. Up
+     * to 0.3.1 the client waited this long and tried again, so an address
+     * the API edge had refused for 3,900 seconds held each call for about
+     * three minutes before the same exception.
      */
     public const MAX_RETRY_AFTER_SECONDS = 60;
 
@@ -158,7 +163,9 @@ class Kawaa
      * - A connection that was never opened (see PRE_SEND_CURL_ERRNOS), for
      *   every method: nothing reached the API.
      *
-     * Nothing is retried when the error body says `retry_may_charge_again`.
+     * Nothing is retried when the error body says `retry_may_charge_again`,
+     * or when the API asks for a longer wait than MAX_RETRY_AFTER_SECONDS:
+     * waiting less than it asked would only be refused again.
      * Every exception thrown from a keyed call carries its key
      * (KawaaException::getIdempotencyKey()), so the caller's own retry can
      * reuse it.
@@ -258,7 +265,11 @@ class Kawaa
                     $errorResponse->getHeaderLine('Retry-After'),
                     $attempt,
                 );
-                if ($lastAttempt || !self::shouldRetry($statusCode, $error, $replaySafe, $keyed)) {
+                if (
+                    $lastAttempt
+                    || !self::shouldRetry($statusCode, $error, $replaySafe, $keyed)
+                    || self::asksLongerThanClientWaits($errorResponse->getHeaderLine('Retry-After'), $error)
+                ) {
                     throw $this->givenUp($error, $attempt + 1);
                 }
                 $this->pause($this->retryDelaySeconds($errorResponse->getHeaderLine('Retry-After'), $error, $attempt));
@@ -450,6 +461,18 @@ class Kawaa
         }
 
         return $seconds >= PHP_INT_MAX ? PHP_INT_MAX : (int) ceil($seconds);
+    }
+
+    /**
+     * Whether the API asked for a longer wait than MAX_RETRY_AFTER_SECONDS:
+     * its `Retry-After` (else the body's `retry_after_seconds`), read the way
+     * retryDelaySeconds() reads it. Such an answer is thrown at once.
+     */
+    private static function asksLongerThanClientWaits(string $retryAfterHeader, KawaaException $error): bool
+    {
+        $seconds = self::parseRetryAfter($retryAfterHeader) ?? $error->getRetryAfterSeconds();
+
+        return $seconds !== null && $seconds > self::MAX_RETRY_AFTER_SECONDS;
     }
 
     /**

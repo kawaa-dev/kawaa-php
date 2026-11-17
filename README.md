@@ -510,7 +510,7 @@ Every exception also carries the API's retry guidance:
 | `getApiErrorCode()` | The API's stable code, such as `CONFLICT` or `INSUFFICIENT_SCOPE` |
 | `getRequestId()` | The API's request id; quote it to support |
 | `getRetryable()` | Whether the same request can succeed after a wait; null when the API did not say |
-| `getRetryAfterSeconds()` | How long the API asked you to wait, uncapped; null when it did not say |
+| `getRetryAfterSeconds()` | How long the API asked you to wait, uncapped; null when it did not say. Over `Kawaa::MAX_RETRY_AFTER_SECONDS` (60), the client did not retry the call |
 | `retryRequiresSameIdempotencyKey()` | True when the API said to repeat only with the same key |
 | `retryMayChargeAgain()` | True when this attempt may have been charged and a repeat may be charged again |
 
@@ -518,8 +518,10 @@ Every exception also carries the API's retry guidance:
 
 `maxRetries` is the number of retries after the first attempt, so `0` sends
 each request once. Before a retry the client waits for the `Retry-After` the
-API sent (at most `Kawaa::MAX_RETRY_AFTER_SECONDS`, 60 seconds), or backs off
-exponentially when there is none. A `409 CONFLICT` marked `retryable` on a
+API sent, or backs off exponentially when there is none. When the API asks for
+longer than `Kawaa::MAX_RETRY_AFTER_SECONDS` (60 seconds), the call is not
+retried: the exception is thrown at once with the API's delay on
+`getRetryAfterSeconds()`, so you decide whether to wait that long. A `409 CONFLICT` marked `retryable` on a
 verify or find means a copy of the same keyed call is still running; the
 client repeats it with the same key, and the repeat returns the paid result
 without charging again. Nothing is retried when the error says a repeat may
@@ -534,8 +536,11 @@ instead of charging again:
 try {
     $result = $client->find('John', 'Smith', 'company.com');
 } catch (KawaaException $e) {
-    if ($e->getIdempotencyKey() !== null && !$e->retryMayChargeAgain()) {
-        sleep((int) ($e->getRetryAfterSeconds() ?? 5));
+    $wait = (int) ceil($e->getRetryAfterSeconds() ?? 5);
+    // Over a minute (a blocked address is refused for an hour): retry later,
+    // for example from a queued job, rather than holding this request.
+    if ($e->getIdempotencyKey() !== null && !$e->retryMayChargeAgain() && $wait <= 60) {
+        sleep($wait);
         $result = $client->find('John', 'Smith', 'company.com', $e->getIdempotencyKey());
     } else {
         throw $e;

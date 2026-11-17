@@ -5,6 +5,19 @@ yet list every change made since 0.1.1.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-17
+
+### Changed
+
+- A call the API answers with a delay longer than `Kawaa::MAX_RETRY_AFTER_SECONDS` (60 seconds)
+  in `Retry-After` or the body's `retry_after_seconds` now throws at once, with that delay on
+  the exception (`getRetryAfterSeconds()`, and `getRetryAfter()` on a `RateLimitException`). Up
+  to 0.3.1 the client waited 60 seconds and tried again, up to `maxRetries` times, so a refusal
+  that lasts an hour (the API edge answers a blocked address with `Retry-After: 3900`) held each
+  call for about three minutes before the same exception. A delay of 60 seconds or less is
+  waited and retried as before. The README's retry sample no longer sleeps for longer than a
+  minute.
+
 ## [0.3.1] - 2026-11-16
 
 ### Fixed
