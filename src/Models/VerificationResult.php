@@ -87,6 +87,17 @@ class VerificationResult
          * getJobStatus($jobId, true) rows and finished verify() answers say.
          */
         public readonly bool $fromCacheStated = true,
+        /**
+         * $email with an internationalized domain written back in its
+         * standard Unicode spelling ('info@müller.de' where $email is
+         * 'info@xn--mller-kva.de'), the same as $email for every other
+         * address (email_unicode). The API checks and returns the ASCII form,
+         * so this is what to match a row to your own list by, ignoring case.
+         * Set on getJobStatus($jobId, true) rows and downloadResults() rows
+         * (every row from November 17, 2026); null on older rows and on a
+         * single verify() answer.
+         */
+        public readonly ?string $emailUnicode = null,
     ) {}
 
     /**
@@ -184,6 +195,7 @@ class VerificationResult
             // toArray() writes from_cache_stated, so a round trip keeps "not
             // stated" instead of reading its false back as "checked fresh".
             fromCacheStated: is_bool($data['from_cache'] ?? null) && ($data['from_cache_stated'] ?? null) !== false,
+            emailUnicode: is_string($data['email_unicode'] ?? null) ? $data['email_unicode'] : null,
         );
     }
 
@@ -247,6 +259,7 @@ class VerificationResult
             'verified_at' => $this->verifiedAt,
             'enrichment' => $this->enrichment?->toArray(),
             'from_cache_stated' => $this->fromCacheStated,
+            'email_unicode' => $this->emailUnicode,
         ];
     }
 }

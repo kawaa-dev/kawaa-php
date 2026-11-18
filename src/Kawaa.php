@@ -50,7 +50,7 @@ class Kawaa
      * written; the PHP SDK is released with the other SDKs in this repository
      * and a test holds it to their version.
      */
-    public const VERSION = '0.3.2';
+    public const VERSION = '0.3.3';
     /** Reads of a replayed verification's job, in total, before verify() returns it as pending. */
     private const REPLAY_POLL_MAX_READS = 3;
 

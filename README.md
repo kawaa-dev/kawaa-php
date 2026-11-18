@@ -222,6 +222,18 @@ foreach ($results->results as $r) {
     echo "{$r->email}: {$r->status->value}\n";
 }
 
+// Match each row back to your own list. $email is the address as checked,
+// with an internationalized domain in its ASCII form (info@xn--mller-kva.de);
+// $emailUnicode writes that domain back in Unicode (info@müller.de). Both are
+// lower case: index both, and look up your own address lower-cased.
+$byAddress = [];
+foreach ($results->results as $r) {
+    $byAddress[$r->email] = $r;
+    if ($r->emailUnicode !== null) {
+        $byAddress[$r->emailUnicode] = $r;
+    }
+}
+
 // Download as CSV
 $csvData = $client->downloadResults($jobId, format: 'csv');
 echo $csvData;  // CSV string
