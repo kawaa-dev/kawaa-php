@@ -93,9 +93,9 @@ class VerificationResult
          * 'info@xn--mller-kva.de'), the same as $email for every other
          * address (email_unicode). The API checks and returns the ASCII form,
          * so this is what to match a row to your own list by, ignoring case.
-         * Set on getJobStatus($jobId, true) rows and downloadResults() rows
-         * (every row from November 17, 2026); null on older rows and on a
-         * single verify() answer.
+         * Set on every getJobStatus($jobId, true) row and downloadResults()
+         * row, including rows of older jobs; null on a single verify()
+         * answer, which does not carry it.
          */
         public readonly ?string $emailUnicode = null,
     ) {}
@@ -114,6 +114,14 @@ class VerificationResult
                 'free_provider' => $data['free_provider'] ?? false,
                 'catch_all' => $data['catch_all'] ?? false,
             ];
+            // A download row's last three columns are risk flags (there is no
+            // honeypot column). A result stored without them has no key, and
+            // the flag then stays not stated rather than becoming false.
+            foreach (['abuse_email', 'complainer', 'bot_generated'] as $name) {
+                if (array_key_exists($name, $data)) {
+                    $flagsData[$name] = $data[$name];
+                }
+            }
         }
 
         $verificationData = $data['verification'] ?? null;

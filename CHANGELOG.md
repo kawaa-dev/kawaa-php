@@ -5,6 +5,26 @@ yet list every change made since 0.1.1.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-18
+
+### Added
+
+- Download rows (`downloadResults($jobId)`) read the download's three new last columns,
+  `abuse_email`, `complainer` and `bot_generated`, into the row's flags. `VerificationFlags::riskFlag($name)`
+  returns each risk flag as stated: `true`, `false`, or `null` when the answer did not state it.
+  A download row has no honeypot column, so `riskFlag('honeypot')` is `null` there, and the other
+  three are `null` for a result stored before the columns existed. `toArray()` also writes
+  `stated_risk_flags`, so a round trip keeps which flags were stated.
+- The reason `ip_address_mx` (a `risky` result: the mailbox was accepted at an MX record that
+  names an IP address) reaches `$subStatus` as sent. It is an open string, so a reason added later
+  passes through the same way.
+
+### Changed
+
+- `VerificationFlags::$riskFlagsStated` is true only when the answer stated all four risk flags
+  (a job result row or a verification). Before, any one was enough, so a download row with the
+  three new columns would have reported its missing honeypot as a confident `false`.
+
 ## [0.3.3] - 2026-11-18
 
 ### Added
@@ -14,8 +34,8 @@ yet list every change made since 0.1.1.
   `email_unicode`, the address with an internationalized domain written back in Unicode
   (`info@müller.de` where `$email` is `info@xn--mller-kva.de`), the same as `$email` for every
   other address. The API checks and returns the ASCII form, so this is the field to match a row
-  to your own list by. Before, the client dropped it. `null` on rows the API wrote before
-  November 17, 2026. `toArray()` writes it as `email_unicode`.
+  to your own list by. Before, the client dropped it. The API sends it on every row it serves,
+  including rows of older jobs. `toArray()` writes it as `email_unicode`.
 
 ## [0.3.2] - 2026-11-17
 

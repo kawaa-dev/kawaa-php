@@ -645,12 +645,14 @@ connection.
 | `complainer` | bool | A complaint-handling mailbox at a reviewed anti-spam, feedback-loop or consumer-protection organization. Always comes with `abuseEmail` |
 | `honeypot` | bool | The API's `honeypot` flag |
 | `botGenerated` | bool | The API's `bot_generated` flag |
-| `riskFlagsStated` | bool | Whether the answer carried the four flags above. `false` on a download row: there they read `false` without meaning "no" |
+| `riskFlagsStated` | bool | Whether the answer carried all four flags above. `false` on a download row: there a flag it did not state reads `false` without meaning "no" |
 
 These four lower `score` without changing `status`, so read them to see why a
-score is low. The download export does not carry them, so on a download row
-they read `false` and `riskFlagsStated` is `false`: read them from `verify()`
-or from `getJobStatus()` results.
+score is low. A download row carries `abuse_email`, `complainer` and
+`bot_generated` as its last columns but has no honeypot column, and a result
+stored before those columns existed has none of them. So on a download row
+read each one with `$flags->riskFlag('abuse_email')`: it returns `true`,
+`false`, or `null` when the row did not state it.
 
 ### JobStatusResult
 
